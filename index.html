@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Gaza Relief — USDT TRC-20</title>
+  <meta name="description" content="Gaza Relief — support families in Gaza with USDT on TRON.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="container">
+    <section class="hero">
+      <div class="badge">USDT • TRC-20 • TRON</div>
+      <h1>Gaza Relief</h1>
+      <p>Support humanitarian relief for families in Gaza.</p>
+    </section>
+
+    <section class="card">
+      <div class="row">
+        <h2>Donate with USDT</h2>
+        <span id="network" class="status">TRON Mainnet</span>
+      </div>
+
+      <button id="connect" class="primary">Connect Wallet</button>
+      <p id="wallet" class="muted"></p>
+
+      <div id="donationArea" class="hidden">
+        <label>Donation amount (USDT)</label>
+        <div class="amounts">
+          <button data-amount="10">$10</button>
+          <button data-amount="25">$25</button>
+          <button data-amount="50">$50</button>
+          <button data-amount="100">$100</button>
+        </div>
+        <input id="amount" type="number" min="1" step="0.01" placeholder="Custom amount">
+        <button id="donate" class="primary">Donate USDT</button>
+      </div>
+
+      <div id="message" class="message"></div>
+      <a id="txLink" class="hidden" target="_blank" rel="noopener">View transaction on TRONSCAN</a>
+    </section>
+
+    <section class="info">
+      <h3>Recipient</h3>
+      <code id="recipient">TLbKGSeKQtB1iYh7sBRTk2p9kcYjBQb2Np</code>
+      <p class="muted small">Always verify the recipient address in your wallet before approving a transaction.</p>
+    </section>
+
+    <footer>
+      Gaza Relief • This page never asks for your seed phrase or private key.
+    </footer>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/tronweb@6.0.4/dist/TronWeb.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
