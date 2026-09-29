@@ -1,6 +1,5 @@
-const RECIPIENT = "TLbKGSeKQtB1iYh7sBRTk2p9kcYjBQb2Np";
-const USDT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
-const USDT_DECIMALS = 6;
+import { WalletConnectAdapter } from
+  "https://esm.sh/@tronweb3/tronwallet-adapter-walletconnect@3.1.0";
 
 const PROJECT_ID = "ecc1996489bb46449977c5fe927d8d25";
 
@@ -21,27 +20,22 @@ async function connectWallet() {
   try {
     msg("Opening wallet connection...");
 
-   const adapters =
-  window['@tronweb3/tronwallet-adapters'];
-
-    if (!adapters) {
-      throw new Error("TRON Wallet Adapter did not load.");
-    }
-
-    const { WalletConnectAdapter } = adapters;
-
     adapter = new WalletConnectAdapter({
       network: "Mainnet",
+
       options: {
         relayUrl: "wss://relay.walletconnect.com",
+
         projectId: PROJECT_ID,
+
         metadata: {
           name: "Gaza Relief",
-          description: "Support humanitarian relief in Gaza",
+          description: "Support humanitarian relief for families in Gaza",
           url: "https://mervatzaqout5-afk.github.io/gaza-relief/",
           icons: []
         }
       },
+
       themeMode: "light"
     });
 
@@ -63,6 +57,7 @@ async function connectWallet() {
     msg("Wallet connected successfully.");
 
   } catch (error) {
+
     console.error(error);
 
     msg(
@@ -72,10 +67,14 @@ async function connectWallet() {
   }
 }
 
-document.querySelectorAll("[data-amount]").forEach((button) => {
-  button.addEventListener("click", () => {
-    $("amount").value = button.dataset.amount;
+document
+  .querySelectorAll("[data-amount]")
+  .forEach((button) => {
+
+    button.addEventListener("click", () => {
+      $("amount").value = button.dataset.amount;
+    });
+
   });
-});
 
 $("connect").addEventListener("click", connectWallet);
