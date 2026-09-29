@@ -10,9 +10,13 @@ const RECIPIENT = "TLbKGSeKQtB1iYh7sBRTk2p9kcYjBQb2Np";
 const USDT_CONTRACT =
   "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
 
-const tronWeb = new TronWeb({
-  fullHost: "https://api.trongrid.io"
-});
+const tronWeb = window.TronWeb.TronWeb
+  ? new window.TronWeb.TronWeb({
+      fullHost: "https://api.trongrid.io"
+    })
+  : new window.TronWeb({
+      fullHost: "https://api.trongrid.io"
+    });
 
 let adapter = null;
 let walletAddress = null;
