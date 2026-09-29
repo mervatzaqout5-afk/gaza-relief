@@ -2,297 +2,514 @@ import { WalletConnectAdapter } from
   "https://esm.sh/@tronweb3/tronwallet-adapter-walletconnect@3.1.0";
 
 
+const PROJECT_ID =
+  "ecc1996489bb46449977c5fe927d8d25";
 
-const PROJECT_ID = "ecc1996489bb46449977c5fe927d8d25";
 
-const RECIPIENT = "TLbKGSeKQtB1iYh7sBRTk2p9kcYjBQb2Np";
+const RECIPIENT =
+  "TLbKGSeKQtB1iYh7sBRTk2p9kcYjBQb2Np";
 
-const USDT_CONTRACT =
+
+const USDT =
   "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
 
-const tronWeb = window.TronWeb.TronWeb
-  ? new window.TronWeb.TronWeb({
-      fullHost: "https://api.trongrid.io"
-    })
-  : new window.TronWeb({
-      fullHost: "https://api.trongrid.io"
-    });
+
+const USDT_DECIMALS = 6;
+
 
 let adapter = null;
 let walletAddress = null;
+let tronWeb = null;
 
-const $ = (id) => document.getElementById(id);
+
+const $ = (id) =>
+  document.getElementById(id);
+
 
 function msg(text) {
   $("message").textContent = text;
 }
 
+
 function shortenAddress(address) {
-  return address.slice(0, 6) + "..." + address.slice(-6);
+  return (
+    address.slice(0, 6) +
+    "..." +
+    address.slice(-6)
+  );
 }
 
+
+/*
+ * Create TronWeb from the UMD build.
+ */
+function createTronWeb() {
+
+  if (
+    window.TronWeb &&
+    window.TronWeb.TronWeb
+  ) {
+
+    return new window.TronWeb.TronWeb({
+      fullHost: "https://api.trongrid.io"
+    });
+
+  }
+
+
+  if (window.TronWeb) {
+
+    return new window.TronWeb({
+      fullHost: "https://api.trongrid.io"
+    });
+
+  }
+
+
+  throw new Error(
+    "TronWeb failed to load."
+  );
+}
+
+
+/*
+ * Connect WalletConnect wallet.
+ */
 async function connectWallet() {
+
   try {
+
     msg("Opening wallet connection...");
 
+
     adapter = new WalletConnectAdapter({
+
       network: "Mainnet",
 
       options: {
-        relayUrl: "wss://relay.walletconnect.com",
 
-        projectId: PROJECT_ID,
+        relayUrl:
+          "wss://relay.walletconnect.com",
+
+        projectId:
+          PROJECT_ID,
 
         metadata: {
-          name: "Gaza Relief",
+
+          name:
+            "Gaza Relief",
+
           description:
             "Support humanitarian relief for families in Gaza",
+
           url:
             "https://mervatzaqout5-afk.github.io/gaza-relief/",
+
           icons: []
+
         }
+
       },
 
       themeMode: "light"
+
     });
+
 
     await adapter.connect();
 
-    walletAddress = adapter.address;
+
+    walletAddress =
+      adapter.address;
+
 
     if (!walletAddress) {
-      throw new Error("Wallet address was not returned.");
+
+      throw new Error(
+        "Wallet address was not returned."
+      );
+
     }
 
+
+    tronWeb =
+      createTronWeb();
+
+
     $("wallet").textContent =
-      "Connected: " + shortenAddress(walletAddress);
+      "Connected: " +
+      shortenAddress(walletAddress);
 
-    $("connect").textContent = "Wallet Connected";
 
-    $("donationArea").classList.remove("hidden");
+    $("connect").textContent =
+      "Wallet Connected";
 
-    msg("Wallet connected successfully.");
+
+    $("donationArea")
+      .classList
+      .remove("hidden");
+
+
+    msg(
+      "Wallet connected successfully. Choose an amount."
+    );
+
 
   } catch (error) {
-    console.error(error);
+
+    console.error(
+      "Wallet connection error:",
+      error
+    );
+
 
     msg(
       "Connection failed: " +
       (error.message || error)
     );
+
   }
+
 }
 
+
+/*
+ * Select preset amount.
+ */
+document
+  .querySelectorAll("[data-amount]")
+  .forEach((button) => {
+
+    button.addEventListener(
+      "click",
+      () => {
+
+        $("amount").value =
+          button.dataset.amount;
+
+      }
+    );
+
+  });
+
+
+/*
+ * Build and send USDT TRC-20 transaction.
+ */
 async function donateUSDT() {
+
   try {
+
     if (!adapter || !walletAddress) {
-      msg("Please connect your wallet first.");
-      return;
-    }
 
-    const amountInput = $("amount").value;
-    const amount = Number(amountInput);
-
-    if (!Number.isFinite(amount) || amount <= 0) {
-      msg("Please enter a valid donation amount.");
-      return;
-    }
-
-    msg("Preparing USDT transaction...");
-
-    // USDT uses 6 decimals
-    const amountInUnits = Math.round(amount * 1_000_000);
-
-    // Build the TRC-20 transfer transaction.
-    // TRON's official WalletConnect example uses
-    // typed ABI parameters here.
-    const result =
-      await tronWeb.transactionBuilder.triggerSmartContract(
-        USDT_CONTRACT,
-        "transfer(address,uint256)",
-        {
-          feeLimit: 100_000_000,
-          callValue: 0
-        },
-        [
-          {
-            type: "address",
-            value: RECIPIENT
-          },
-          {
-            type: "uint256",
-            value: amountInUnits.toString()
-          }
-        ],
-        walletAddress
-      );
-
-    if (!result || !result.transaction) {
-      console.error("Transaction creation result:", result);
-      throw new Error("Could not create the USDT transaction.");
-    }
-
-    msg("Waiting for wallet approval...");
-
-    const signedTransaction =
-      await adapter.signTransaction(result.transaction);
-
-    msg("Broadcasting transaction...");
-
-    const broadcast =
-      await tronWeb.trx.sendRawTransaction(
-        signedTransaction
-      );
-
-    console.log("Broadcast result:", broadcast);
-
-    if (!broadcast.result) {
       throw new Error(
-        broadcast.message
-          ? tronWeb.toUtf8(broadcast.message)
-          : "Transaction was rejected by the TRON network."
+        "Connect your wallet first."
       );
+
     }
 
-    const txid = broadcast.txid;
 
-    msg("Donation sent successfully. Thank you!");
+    if (!tronWeb) {
 
-    $("txLink").href =
-      "https://tronscan.org/#/transaction/" + txid;
+      tronWeb =
+        createTronWeb();
 
-    $("txLink").textContent =
-      "View transaction on TRONSCAN";
+    }
 
-    $("txLink").classList.remove("hidden");
 
-  } catch (error) {
-    console.error("Donation error:", error);
+    const amount =
+      Number($("amount").value);
+
+
+    if (
+      !Number.isFinite(amount) ||
+      amount <= 0
+    ) {
+
+      throw new Error(
+        "Enter a valid donation amount."
+      );
+
+    }
+
+
+    /*
+     * Avoid floating-point problems.
+     * USDT has 6 decimals.
+     */
+    const amountText =
+      amount.toFixed(6);
+
+
+    const units =
+      BigInt(
+        Math.round(
+          Number(amountText) *
+          1_000_000
+        )
+      );
+
+
+    if (units <= 0n) {
+
+      throw new Error(
+        "Donation amount is too small."
+      );
+
+    }
+
+
+    $("donate").disabled =
+      true;
+
+
+    $("txLink")
+      .classList
+      .add("hidden");
+
 
     msg(
-      "Donation failed: " +
-      (error?.message || String(error))
+      "Preparing the USDT transaction..."
     );
-  }
-}
-  try {
-    if (!adapter || !walletAddress) {
-      msg("Please connect your wallet first.");
-      return;
-    }
 
-    const amountInput = $("amount").value;
 
-    if (!amountInput || Number(amountInput) <= 0) {
-      msg("Please enter a donation amount.");
-      return;
-    }
+    /*
+     * Convert recipient Base58 address
+     * to TRON hex address.
+     */
+    const recipientHex =
+      tronWeb.address.toHex(
+        RECIPIENT
+      );
 
-    const amount = Number(amountInput);
 
-    msg("Preparing USDT transaction...");
+    /*
+     * Remove TRON's 41 prefix.
+     * ABI address is 20 bytes.
+     */
+    const recipient20 =
+      recipientHex
+        .replace(/^41/, "")
+        .toLowerCase();
 
-    // USDT TRC-20 uses 6 decimals
-    const amountInSun = Math.round(amount * 1_000_000);
 
-    // Convert addresses to hexadecimal format
-    const contractAddress =
-      tronWeb.address.toHex(USDT_CONTRACT);
+    /*
+     * USDT transfer(address,uint256)
+     *
+     * Function parameters:
+     *
+     * address = 32-byte padded address
+     * uint256 = 32-byte amount
+     */
+    const encodedAddress =
+      recipient20.padStart(
+        64,
+        "0"
+      );
 
-    const recipientAddress =
-      tronWeb.address.toHex(RECIPIENT);
 
-    // Encode transfer(address,uint256)
+    const encodedAmount =
+      units
+        .toString(16)
+        .padStart(
+          64,
+          "0"
+        );
+
+
     const parameter =
-      tronWeb.utils.abi.encodeParams(
-        ["address", "uint256"],
-        [recipientAddress, amountInSun.toString()]
-      );
+      encodedAddress +
+      encodedAmount;
 
-    // Create unsigned TRC-20 transaction
-    const transaction =
-      await tronWeb.transactionBuilder.triggerSmartContract(
-        contractAddress,
-        "transfer(address,uint256)",
-        {
-          feeLimit: 100_000_000,
-          callValue: 0
-        },
-        parameter,
-        walletAddress
-      );
 
-    if (!transaction.result || !transaction.transaction) {
+    /*
+     * Build unsigned transaction.
+     *
+     * rawParameter avoids the ABI
+     * parameter issue that caused the
+     * previous "Invalid parameters provided"
+     * error.
+     */
+    const result =
+      await tronWeb
+        .transactionBuilder
+        .triggerSmartContract(
+
+          USDT,
+
+          "transfer(address,uint256)",
+
+          {
+            feeLimit:
+              100_000_000,
+
+            callValue:
+              0,
+
+            rawParameter:
+              parameter
+          },
+
+          [],
+
+          walletAddress
+
+        );
+
+
+    if (
+      !result ||
+      !result.transaction
+    ) {
+
       throw new Error(
         "Could not create the USDT transaction."
       );
+
     }
 
-    msg("Waiting for wallet approval...");
 
-    // Ask the connected wallet to sign
+    msg(
+      "Please confirm the transaction in your wallet..."
+    );
+
+
+    /*
+     * Send unsigned transaction to
+     * WalletConnect for signing.
+     */
     const signedTransaction =
       await adapter.signTransaction(
-        transaction.transaction
+        result.transaction
       );
 
-    msg("Broadcasting transaction...");
 
-    // Broadcast signed transaction
-    const result =
-      await tronWeb.trx.sendRawTransaction(
-        signedTransaction
-      );
+    if (!signedTransaction) {
 
-    if (!result.result) {
       throw new Error(
-        result.message
-          ? tronWeb.toUtf8(result.message)
-          : "Transaction was rejected by the TRON network."
+        "The wallet did not return a signed transaction."
       );
+
     }
 
-    const txid = result.txid;
 
-    msg("Donation sent successfully. Thank you!");
+    msg(
+      "Broadcasting transaction..."
+    );
+
+
+    /*
+     * Broadcast signed transaction.
+     */
+    const broadcast =
+      await tronWeb
+        .trx
+        .sendRawTransaction(
+          signedTransaction
+        );
+
+
+    if (
+      !broadcast ||
+      !broadcast.result
+    ) {
+
+      let errorMessage =
+        "Transaction was rejected by the TRON network.";
+
+
+      if (broadcast?.message) {
+
+        try {
+
+          errorMessage =
+            tronWeb.toUtf8(
+              broadcast.message
+            );
+
+        } catch {
+
+          errorMessage =
+            broadcast.message;
+
+        }
+
+      }
+
+
+      throw new Error(
+        errorMessage
+      );
+
+    }
+
+
+    const txid =
+      broadcast.txid ||
+      signedTransaction.txID;
+
+
+    if (!txid) {
+
+      throw new Error(
+        "Transaction was broadcast but no transaction ID was returned."
+      );
+
+    }
+
+
+    msg(
+      "Donation submitted successfully. Thank you!"
+    );
+
 
     $("txLink").href =
-      "https://tronscan.org/#/transaction/" + txid;
+      "https://tronscan.org/#/transaction/" +
+      txid;
+
 
     $("txLink").textContent =
       "View transaction on TRONSCAN";
 
-    $("txLink").classList.remove("hidden");
+
+    $("txLink")
+      .classList
+      .remove("hidden");
+
 
   } catch (error) {
-    console.error(error);
+
+    console.error(
+      "Donation error:",
+      error
+    );
+
 
     msg(
       "Donation failed: " +
       (error.message || error)
     );
+
+
+  } finally {
+
+    $("donate").disabled =
+      false;
+
   }
+
 }
 
-// Preset amount buttons
-document
-  .querySelectorAll("[data-amount]")
-  .forEach((button) => {
 
-    button.addEventListener("click", () => {
-      $("amount").value = button.dataset.amount;
-    });
+$("connect")
+  .addEventListener(
+    "click",
+    connectWallet
+  );
 
-  });
 
-// Connect wallet button
-$("connect").addEventListener(
-  "click",
-  connectWallet
-);
-
-// Donate button
-$("donate").addEventListener(
-  "click",
-  donateUSDT
-);
+$("donate")
+  .addEventListener(
+    "click",
+    donateUSDT
+  );
