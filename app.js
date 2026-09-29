@@ -1,35 +1,22 @@
-import { WalletConnectAdapter } from
-  "https://esm.sh/@tronweb3/tronwallet-adapter-walletconnect@3.1.0";
-
-
-const PROJECT_ID =
-  "ecc1996489bb46449977c5fe927d8d25";
-
+import { BinanceAdapter } from
+  "https://esm.sh/@tronweb3/tronwallet-adapter-binance@1.1.1";
 
 const RECIPIENT =
   "TLbKGSeKQtB1iYh7sBRTk2p9kcYjBQb2Np";
 
-
 const USDT =
   "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
-
-
-const USDT_DECIMALS = 6;
-
 
 let adapter = null;
 let walletAddress = null;
 let tronWeb = null;
 
-
 const $ = (id) =>
   document.getElementById(id);
-
 
 function msg(text) {
   $("message").textContent = text;
 }
-
 
 function shortenAddress(address) {
   return (
@@ -39,129 +26,73 @@ function shortenAddress(address) {
   );
 }
 
-
-/*
- * Create TronWeb from the UMD build.
- */
 function createTronWeb() {
-
   if (
     window.TronWeb &&
     window.TronWeb.TronWeb
   ) {
-
     return new window.TronWeb.TronWeb({
       fullHost: "https://api.trongrid.io"
     });
-
   }
 
-
   if (window.TronWeb) {
-
     return new window.TronWeb({
       fullHost: "https://api.trongrid.io"
     });
-
   }
 
-
-  throw new Error(
-    "TronWeb failed to load."
-  );
+  throw new Error("TronWeb failed to load.");
 }
 
 
-/*
- * Connect WalletConnect wallet.
- */
+/* =========================
+   CONNECT BINANCE WALLET
+========================= */
+
 async function connectWallet() {
 
   try {
 
-    msg("Opening wallet connection...");
+    msg("Opening Binance Wallet...");
 
-
-    adapter = new WalletConnectAdapter({
-
-      network: "Mainnet",
-
-      options: {
-
-        relayUrl:
-          "wss://relay.walletconnect.com",
-
-        projectId:
-          PROJECT_ID,
-
-        metadata: {
-
-          name:
-            "Gaza Relief",
-
-          description:
-            "Support humanitarian relief for families in Gaza",
-
-          url:
-            "https://mervatzaqout5-afk.github.io/gaza-relief/",
-
-          icons: []
-
-        }
-
-      },
-
-      themeMode: "light"
-
-    });
-
+    adapter = new BinanceAdapter();
 
     await adapter.connect();
-
 
     walletAddress =
       adapter.address;
 
-
     if (!walletAddress) {
-
       throw new Error(
-        "Wallet address was not returned."
+        "Binance Wallet address was not returned."
       );
-
     }
-
 
     tronWeb =
       createTronWeb();
-
 
     $("wallet").textContent =
       "Connected: " +
       shortenAddress(walletAddress);
 
-
     $("connect").textContent =
-      "Wallet Connected";
-
+      "Binance Wallet Connected";
 
     $("donationArea")
       .classList
       .remove("hidden");
 
-
     msg(
-      "Wallet connected successfully. Choose an amount."
+      "Binance Wallet connected successfully."
     );
-
 
   } catch (error) {
 
     console.error(
-      "Wallet connection error:",
+      "Binance Wallet connection error:",
       error
     );
-
 
     msg(
       "Connection failed: " +
@@ -169,13 +100,13 @@ async function connectWallet() {
     );
 
   }
-
 }
 
 
-/*
- * Select preset amount.
- */
+/* =========================
+   PRESET AMOUNTS
+========================= */
+
 document
   .querySelectorAll("[data-amount]")
   .forEach((button) => {
@@ -193,120 +124,82 @@ document
   });
 
 
-/*
- * Build and send USDT TRC-20 transaction.
- */
+/* =========================
+   DONATE USDT
+========================= */
+
 async function donateUSDT() {
 
   try {
 
     if (!adapter || !walletAddress) {
-
       throw new Error(
-        "Connect your wallet first."
+        "Connect Binance Wallet first."
       );
-
     }
-
 
     if (!tronWeb) {
-
       tronWeb =
         createTronWeb();
-
     }
-
 
     const amount =
       Number($("amount").value);
-
 
     if (
       !Number.isFinite(amount) ||
       amount <= 0
     ) {
-
       throw new Error(
         "Enter a valid donation amount."
       );
-
     }
-
-
-    /*
-     * Avoid floating-point problems.
-     * USDT has 6 decimals.
-     */
-    const amountText =
-      amount.toFixed(6);
-
 
     const units =
       BigInt(
         Math.round(
-          Number(amountText) *
-          1_000_000
+          amount * 1_000_000
         )
       );
 
-
     if (units <= 0n) {
-
       throw new Error(
         "Donation amount is too small."
       );
-
     }
-
 
     $("donate").disabled =
       true;
 
-
     $("txLink")
       .classList
       .add("hidden");
-
 
     msg(
       "Preparing the USDT transaction..."
     );
 
 
-    /*
-     * Convert recipient Base58 address
-     * to TRON hex address.
-     */
+    /* Convert recipient to TRON hex */
+
     const recipientHex =
       tronWeb.address.toHex(
         RECIPIENT
       );
 
-
-    /*
-     * Remove TRON's 41 prefix.
-     * ABI address is 20 bytes.
-     */
     const recipient20 =
       recipientHex
         .replace(/^41/, "")
         .toLowerCase();
 
 
-    /*
-     * USDT transfer(address,uint256)
-     *
-     * Function parameters:
-     *
-     * address = 32-byte padded address
-     * uint256 = 32-byte amount
-     */
+    /* ABI encode transfer(address,uint256) */
+
     const encodedAddress =
       recipient20.padStart(
         64,
         "0"
       );
-
 
     const encodedAmount =
       units
@@ -316,20 +209,13 @@ async function donateUSDT() {
           "0"
         );
 
-
     const parameter =
       encodedAddress +
       encodedAmount;
 
 
-    /*
-     * Build unsigned transaction.
-     *
-     * rawParameter avoids the ABI
-     * parameter issue that caused the
-     * previous "Invalid parameters provided"
-     * error.
-     */
+    /* Build unsigned USDT transaction */
+
     const result =
       await tronWeb
         .transactionBuilder
@@ -361,98 +247,43 @@ async function donateUSDT() {
       !result ||
       !result.transaction
     ) {
-
       throw new Error(
         "Could not create the USDT transaction."
       );
-
     }
 
 
     msg(
-      "Please confirm the transaction in your wallet..."
+      "Please review the transaction in Binance Wallet..."
     );
 
 
     /*
-     * Send unsigned transaction to
-     * WalletConnect for signing.
+     * Binance Adapter:
+     * sign + broadcast
      */
-    const signedTransaction =
-      await adapter.signTransaction(
+    const response =
+      await adapter.signAndSendTransaction(
         result.transaction
       );
 
 
-    if (!signedTransaction) {
-
-      throw new Error(
-        "The wallet did not return a signed transaction."
-      );
-
-    }
-
-
-    msg(
-      "Broadcasting transaction..."
+    console.log(
+      "Binance transaction response:",
+      response
     );
 
 
-    /*
-     * Broadcast signed transaction.
-     */
-    const broadcast =
-      await tronWeb
-        .trx
-        .sendRawTransaction(
-          signedTransaction
-        );
-
-
-    if (
-      !broadcast ||
-      !broadcast.result
-    ) {
-
-      let errorMessage =
-        "Transaction was rejected by the TRON network.";
-
-
-      if (broadcast?.message) {
-
-        try {
-
-          errorMessage =
-            tronWeb.toUtf8(
-              broadcast.message
-            );
-
-        } catch {
-
-          errorMessage =
-            broadcast.message;
-
-        }
-
-      }
-
-
-      throw new Error(
-        errorMessage
-      );
-
-    }
-
-
     const txid =
-      broadcast.txid ||
-      signedTransaction.txID;
+      response?.txid ||
+      response?.transaction?.txID ||
+      response?.txID;
 
 
     if (!txid) {
 
       throw new Error(
-        "Transaction was broadcast but no transaction ID was returned."
+        "Binance Wallet did not return a transaction ID."
       );
 
     }
@@ -467,10 +298,8 @@ async function donateUSDT() {
       "https://tronscan.org/#/transaction/" +
       txid;
 
-
     $("txLink").textContent =
       "View transaction on TRONSCAN";
-
 
     $("txLink")
       .classList
@@ -484,12 +313,10 @@ async function donateUSDT() {
       error
     );
 
-
     msg(
       "Donation failed: " +
       (error.message || error)
     );
-
 
   } finally {
 
@@ -501,12 +328,15 @@ async function donateUSDT() {
 }
 
 
+/* =========================
+   BUTTONS
+========================= */
+
 $("connect")
   .addEventListener(
     "click",
     connectWallet
   );
-
 
 $("donate")
   .addEventListener(
