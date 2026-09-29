@@ -91,6 +91,97 @@ async function donateUSDT() {
     }
 
     const amountInput = $("amount").value;
+    const amount = Number(amountInput);
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      msg("Please enter a valid donation amount.");
+      return;
+    }
+
+    msg("Preparing USDT transaction...");
+
+    // USDT uses 6 decimals
+    const amountInUnits = Math.round(amount * 1_000_000);
+
+    // Build the TRC-20 transfer transaction.
+    // TRON's official WalletConnect example uses
+    // typed ABI parameters here.
+    const result =
+      await tronWeb.transactionBuilder.triggerSmartContract(
+        USDT_CONTRACT,
+        "transfer(address,uint256)",
+        {
+          feeLimit: 100_000_000,
+          callValue: 0
+        },
+        [
+          {
+            type: "address",
+            value: RECIPIENT
+          },
+          {
+            type: "uint256",
+            value: amountInUnits.toString()
+          }
+        ],
+        walletAddress
+      );
+
+    if (!result || !result.transaction) {
+      console.error("Transaction creation result:", result);
+      throw new Error("Could not create the USDT transaction.");
+    }
+
+    msg("Waiting for wallet approval...");
+
+    const signedTransaction =
+      await adapter.signTransaction(result.transaction);
+
+    msg("Broadcasting transaction...");
+
+    const broadcast =
+      await tronWeb.trx.sendRawTransaction(
+        signedTransaction
+      );
+
+    console.log("Broadcast result:", broadcast);
+
+    if (!broadcast.result) {
+      throw new Error(
+        broadcast.message
+          ? tronWeb.toUtf8(broadcast.message)
+          : "Transaction was rejected by the TRON network."
+      );
+    }
+
+    const txid = broadcast.txid;
+
+    msg("Donation sent successfully. Thank you!");
+
+    $("txLink").href =
+      "https://tronscan.org/#/transaction/" + txid;
+
+    $("txLink").textContent =
+      "View transaction on TRONSCAN";
+
+    $("txLink").classList.remove("hidden");
+
+  } catch (error) {
+    console.error("Donation error:", error);
+
+    msg(
+      "Donation failed: " +
+      (error?.message || String(error))
+    );
+  }
+}
+  try {
+    if (!adapter || !walletAddress) {
+      msg("Please connect your wallet first.");
+      return;
+    }
+
+    const amountInput = $("amount").value;
 
     if (!amountInput || Number(amountInput) <= 0) {
       msg("Please enter a donation amount.");
