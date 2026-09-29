@@ -6,7 +6,11 @@
   <title>Gaza Relief — USDT TRC-20</title>
   <meta name="description" content="Gaza Relief — support families in Gaza with USDT on TRON.">
   <link rel="stylesheet" href="style.css">
-  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/sign-client/dist/index.umd.js"></script>
+<script type="module">
+  import bufferPolyfill from "https://cdn.jsdelivr.net/npm/buffer-polyfill@6.0.3/+esm";
+  window.Buffer = bufferPolyfill;
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@walletconnect/sign-client/dist/index.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tronweb3/tronwallet-adapters/lib/umd/index.js"></script>
 </head>
 <body>
