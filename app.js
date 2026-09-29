@@ -21,8 +21,8 @@ async function connectWallet() {
   try {
     msg("Opening wallet connection...");
 
-    const adapters =
-      window["@tronweb3/tronwallet-adapters"];
+   const adapters =
+  window['@tronweb3/tronwallet-adapters'];
 
     if (!adapters) {
       throw new Error("TRON Wallet Adapter did not load.");
