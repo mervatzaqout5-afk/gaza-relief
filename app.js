@@ -1,11 +1,16 @@
-import { BinanceAdapter } from
-  "https://esm.sh/@tronweb3/tronwallet-adapter-binance@1.1.1";
+import { WalletConnectAdapter } from
+  "https://esm.sh/@tronweb3/tronwallet-adapter-walletconnect@3.1.0";
+
+const PROJECT_ID =
+  "ecc1996489bb46449977c5fe927d8d25";
 
 const RECIPIENT =
   "TLbKGSeKQtB1iYh7sBRTk2p9kcYjBQb2Np";
 
 const USDT =
   "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
+
+const USDT_DECIMALS = 6;
 
 let adapter = null;
 let walletAddress = null;
@@ -42,21 +47,40 @@ function createTronWeb() {
     });
   }
 
-  throw new Error("TronWeb failed to load.");
+  throw new Error(
+    "TronWeb failed to load."
+  );
 }
 
-
-/* =========================
-   CONNECT BINANCE WALLET
-========================= */
-
 async function connectWallet() {
-
   try {
+    msg("Opening wallet connection...");
 
-    msg("Opening Binance Wallet...");
+    adapter = new WalletConnectAdapter({
+      network: "Mainnet",
+      options: {
+        relayUrl:
+          "wss://relay.walletconnect.com",
 
-    adapter = new BinanceAdapter();
+        projectId:
+          PROJECT_ID,
+
+        metadata: {
+          name:
+            "Gaza Relief",
+
+          description:
+            "Support humanitarian relief for families in Gaza",
+
+          url:
+            "https://mervatzaqout5-afk.github.io/gaza-relief/",
+
+          icons: []
+        }
+      },
+
+      themeMode: "light"
+    });
 
     await adapter.connect();
 
@@ -65,7 +89,7 @@ async function connectWallet() {
 
     if (!walletAddress) {
       throw new Error(
-        "Binance Wallet address was not returned."
+        "Wallet address was not returned."
       );
     }
 
@@ -77,20 +101,19 @@ async function connectWallet() {
       shortenAddress(walletAddress);
 
     $("connect").textContent =
-      "Binance Wallet Connected";
+      "Wallet Connected";
 
     $("donationArea")
       .classList
       .remove("hidden");
 
     msg(
-      "Binance Wallet connected successfully."
+      "Wallet connected successfully. Choose an amount."
     );
 
   } catch (error) {
-
     console.error(
-      "Binance Wallet connection error:",
+      "Wallet connection error:",
       error
     );
 
@@ -98,43 +121,26 @@ async function connectWallet() {
       "Connection failed: " +
       (error.message || error)
     );
-
   }
 }
-
-
-/* =========================
-   PRESET AMOUNTS
-========================= */
 
 document
   .querySelectorAll("[data-amount]")
   .forEach((button) => {
-
     button.addEventListener(
       "click",
       () => {
-
         $("amount").value =
           button.dataset.amount;
-
       }
     );
-
   });
 
-
-/* =========================
-   DONATE USDT
-========================= */
-
 async function donateUSDT() {
-
   try {
-
     if (!adapter || !walletAddress) {
       throw new Error(
-        "Connect Binance Wallet first."
+        "Connect your wallet first."
       );
     }
 
@@ -155,10 +161,14 @@ async function donateUSDT() {
       );
     }
 
+    const amountText =
+      amount.toFixed(6);
+
     const units =
       BigInt(
         Math.round(
-          amount * 1_000_000
+          Number(amountText) *
+          1_000_000
         )
       );
 
@@ -179,9 +189,6 @@ async function donateUSDT() {
       "Preparing the USDT transaction..."
     );
 
-
-    /* Convert recipient to TRON hex */
-
     const recipientHex =
       tronWeb.address.toHex(
         RECIPIENT
@@ -191,9 +198,6 @@ async function donateUSDT() {
       recipientHex
         .replace(/^41/, "")
         .toLowerCase();
-
-
-    /* ABI encode transfer(address,uint256) */
 
     const encodedAddress =
       recipient20.padStart(
@@ -213,18 +217,12 @@ async function donateUSDT() {
       encodedAddress +
       encodedAmount;
 
-
-    /* Build unsigned USDT transaction */
-
     const result =
       await tronWeb
         .transactionBuilder
         .triggerSmartContract(
-
           USDT,
-
           "transfer(address,uint256)",
-
           {
             feeLimit:
               100_000_000,
@@ -239,9 +237,7 @@ async function donateUSDT() {
           [],
 
           walletAddress
-
         );
-
 
     if (
       !result ||
@@ -252,47 +248,69 @@ async function donateUSDT() {
       );
     }
 
-
     msg(
-      "Please review the transaction in Binance Wallet..."
+      "Please confirm the transaction in your wallet..."
     );
 
-
-    /*
-     * Binance Adapter:
-     * sign + broadcast
-     */
-    const response =
-      await adapter.signAndSendTransaction(
+    const signedTransaction =
+      await adapter.signTransaction(
         result.transaction
       );
 
-
-    console.log(
-      "Binance transaction response:",
-      response
-    );
-
-
-    const txid =
-      response?.txid ||
-      response?.transaction?.txID ||
-      response?.txID;
-
-
-    if (!txid) {
-
+    if (!signedTransaction) {
       throw new Error(
-        "Binance Wallet did not return a transaction ID."
+        "The wallet did not return a signed transaction."
       );
-
     }
 
+    msg(
+      "Broadcasting transaction..."
+    );
+
+    const broadcast =
+      await tronWeb
+        .trx
+        .sendRawTransaction(
+          signedTransaction
+        );
+
+    if (
+      !broadcast ||
+      !broadcast.result
+    ) {
+      let errorMessage =
+        "Transaction was rejected by the TRON network.";
+
+      if (broadcast?.message) {
+        try {
+          errorMessage =
+            tronWeb.toUtf8(
+              broadcast.message
+            );
+        } catch {
+          errorMessage =
+            broadcast.message;
+        }
+      }
+
+      throw new Error(
+        errorMessage
+      );
+    }
+
+    const txid =
+      broadcast.txid ||
+      signedTransaction.txID;
+
+    if (!txid) {
+      throw new Error(
+        "Transaction was broadcast but no transaction ID was returned."
+      );
+    }
 
     msg(
       "Donation submitted successfully. Thank you!"
     );
-
 
     $("txLink").href =
       "https://tronscan.org/#/transaction/" +
@@ -305,9 +323,7 @@ async function donateUSDT() {
       .classList
       .remove("hidden");
 
-
   } catch (error) {
-
     console.error(
       "Donation error:",
       error
@@ -319,18 +335,10 @@ async function donateUSDT() {
     );
 
   } finally {
-
     $("donate").disabled =
       false;
-
   }
-
 }
-
-
-/* =========================
-   BUTTONS
-========================= */
 
 $("connect")
   .addEventListener(
