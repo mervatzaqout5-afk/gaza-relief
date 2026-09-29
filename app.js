@@ -1,8 +1,7 @@
 import { WalletConnectAdapter } from
   "https://esm.sh/@tronweb3/tronwallet-adapter-walletconnect@3.1.0";
 
-import { TronWeb } from
-  "https://esm.sh/tronweb@6.5.1";
+
 
 const PROJECT_ID = "ecc1996489bb46449977c5fe927d8d25";
 
